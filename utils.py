@@ -262,14 +262,14 @@ def get_dataset(data_dir, filename, batch_size=1, num_workers=2, args=None):
     return train_loader, test_loader
 
 
-def get_nework(model_name, num_channel, args, modes=16):
+def get_nework(args):
 
-    if model_name == "FNO1D":
-        net = fno.FNO1d(num_channels=num_channel, modes=modes, initial_step=args.initial_step)
-    elif model_name == "FNO2D":
-        net = fno.FNO2d(num_channels=num_channel, modes=modes, initial_step=args.initial_step)
-    elif model_name == "FNO3D":
-        net = fno.FNO3d(num_channels=num_channel, modes=modes, initial_step=args.initial_step)
+    if args.model_name == "FNO1D":
+        net = fno.FNO1d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
+    elif args.model_name == "FNO2D":
+        net = fno.FNO2d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
+    elif args.model_name == "FNO3D":
+        net = fno.FNO3d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
     
     gpu_num = torch.cuda.device_count()
     
