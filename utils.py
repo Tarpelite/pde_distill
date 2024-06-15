@@ -5,10 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import os
 import h5py
-import tqdm
 from torch.utils.data import Dataset
-from torchvision import datasets, transforms
-from scipy.ndimage.interpolation import rotate as scipyrotate
 import math as mt
 import fno
 
@@ -262,7 +259,7 @@ def get_dataset(data_dir, filename, batch_size=1, num_workers=2, args=None):
     return train_loader, test_loader
 
 
-def get_nework(args):
+def get_network(args):
 
     if args.model_name == "FNO1D":
         net = fno.FNO1d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
@@ -286,7 +283,7 @@ def get_time():
 
 
 def epoch(mode, dataloader, net, optimizer, criterion, args):
-    loss_avg, num_exp = 0, 0, 0
+    loss_avg, num_exp = 0, 0
     net = net.to(args.device)
 
 

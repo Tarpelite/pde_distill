@@ -3,24 +3,27 @@ import argparse
 import torch
 import torch.nn as nn
 from tqdm import tqdm, trange
-from utils import get_dataset, get_network, get_daparam,\
-    TensorDataset, epoch
+from utils import get_dataset, get_network, epoch
 import copy
 
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+from omegaconf import DictConfig, OmegaConf
+import hydra
 
-def main(args):
-
+@hydra.main(version_base=None, config_path=".", config_name="train_1DCFD")
+def main(cfg: DictConfig):
+    print(OmegaConf.to_yaml(cfg)) 
+    args = cfg
     args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-    train_loader,test_loader = get_dataset(args.dataset, args.data_path, args.batch_real,  args=args)
+    train_loader,test_loader = get_dataset(args.data_dir, args.filename, args.batch_real, num_workers=args.num_workers, args=args)
 
     # print('\n================== Exp %d ==================\n '%exp)
     print('Hyper-parameters: \n', args.__dict__)
 
-    save_dir = os.path.join(args.buffer_path, args.dataset)
+    save_dir = os.path.join(args.buffer_path, args.filename)
    
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -55,10 +58,10 @@ def main(args):
     for it in range(0, args.num_experts):
 
         ''' Train synthetic data '''
-        teacher_net = get_network(args.model, args.num_channel, args).to(args.device) # get a random model
+        teacher_net = get_network(args).to(args.device) # get a random model
         teacher_net.train()
         lr = args.lr_teacher
-        teacher_optim = torch.optim.Adam(teacher_net.parameters(), lr=lr, momentum=args.mom, weight_decay=args.l2)  # optimizer_img for synthetic data
+        teacher_optim = torch.optim.Adam(teacher_net.parameters(), lr=lr, weight_decay=args.l2)  # optimizer_img for synthetic data
         teacher_optim.zero_grad()
 
         timestamps = []
@@ -70,10 +73,10 @@ def main(args):
         for e in range(args.train_epochs):
 
             train_loss, train_acc = epoch("train", dataloader=train_loader, net=teacher_net, optimizer=teacher_optim,
-                                        criterion=criterion, args=args, aug=True)
+                                        criterion=criterion, args=args)
 
             test_loss, test_acc = epoch("test", dataloader=test_loader, net=teacher_net, optimizer=None,
-                                        criterion=criterion, args=args, aug=False)
+                                        criterion=criterion, args=args)
 
             print("Itr: {}\tEpoch: {}\tTrain Acc: {}\tTest Acc: {}".format(it, e, train_acc, test_acc))
 
@@ -81,7 +84,7 @@ def main(args):
 
             if e in lr_schedule and args.decay:
                 lr *= 0.1
-                teacher_optim = torch.optim.Adam(teacher_net.parameters(), lr=lr, momentum=args.mom, weight_decay=args.l2)
+                teacher_optim = torch.optim.Adam(teacher_net.parameters(), lr=lr, weight_decay=args.l2)
                 teacher_optim.zero_grad()
 
         trajectories.append(timestamps)
@@ -96,25 +99,27 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Parameter Processing')
-    parser.add_argument('--model_name', type=str, default='FNO1D', help='model')
-    parser.add_argument('--num_experts', type=int, default=100, help='training iterations')
-    parser.add_argument("--reduced_resolution", type=int, default=8)
-    parser.add_argument("--reduced_resolution_t", type=int, default=5)
-    parser.add_argument("--t_train", type=int,default=100)
-    parser.add_argument("--modes", type=int, default=16)
-    parser.add_argument("--width", default=20, type=int)
-    parser.add_argument("--device", default="cuda")
-    parser.add_argument('--lr_teacher', type=float, default=0.01, help='learning rate for updating network parameters')
-    parser.add_argument('--batch_train', type=int, default=256, help='batch size for training networks')
-    parser.add_argument('--batch_real', type=int, default=256, help='batch size for real loader')
-    parser.add_argument('--num_channel', type=int, default=3, help='batch size for real loader')
-    parser.add_argument('--data_path', type=str, default='data', help='dataset path')
-    parser.add_argument('--train_epochs', type=int, default=50)
-    parser.add_argument('--mom', type=float, default=0, help='momentum')
-    parser.add_argument('--l2', type=float, default=0, help='l2 regularization')
-    parser.add_argument('--save_interval', type=int, default=10)
+    # parser = argparse.ArgumentParser(description='Parameter Processing')
+    # parser.add_argument('--model_name', type=str, default='FNO1D', help='model')
+    # parser.add_argument('--num_experts', type=int, default=100, help='training iterations')
+    # parser.add_argument("--reduced_resolution", type=int, default=8)
+    # parser.add_argument("--reduced_resolution_t", type=int, default=5)
+    # parser.add_argument("--t_train", type=int,default=100)
+    # parser.add_argument("--modes", type=int, default=16)
+    # parser.add_argument("--width", default=20, type=int)
+    # parser.add_argument("--device", default="cuda")
+    # parser.add_argument("--num_workers", default=2, type=int)
+    # parser.add_argument('--lr_teacher', type=float, default=0.01, help='learning rate for updating network parameters')
+    # parser.add_argument('--batch_train', type=int, default=256, help='batch size for training networks')
+    # parser.add_argument('--batch_real', type=int, default=256, help='batch size for real loader')
+    # parser.add_argument('--num_channel', type=int, default=3, help='batch size for real loader')
+    # parser.add_argument('--data_dir', type=str, default='data', help='dataset path')
+    # parser.add_argument('--filename', type=str, default='data', help='dataset path')
+    # parser.add_argument('--train_epochs', type=int, default=50)
+    # parser.add_argument('--mom', type=float, default=0, help='momentum')
+    # parser.add_argument('--l2', type=float, default=0, help='l2 regularization')
+    # parser.add_argument('--save_interval', type=int, default=10)
 
-    args = parser.parse_args()
-    main(args)
+    # args = parser.parse_args()
+    main()
 
