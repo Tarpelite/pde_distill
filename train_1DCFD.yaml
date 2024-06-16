@@ -1,10 +1,10 @@
 model_name: 'FNO1D'
 num_experts: 100
-num_workers: 2
 data_dir: "data/1DCFD"
-batch_size: 100
-initial_step: 10
-t_train: 100
+batch_size: 16
+num_workers: 8
+initial_step: 20
+t_train: 21
 filename: '1D_CFD_Rand_Eta0.01_Zeta0.01_periodic_Train.hdf5'
 reduced_resolution: 8
 reduced_resolution_t: 5
@@ -20,4 +20,5 @@ batch_real : 16
 reduced_batch: 1
 device: "cuda"
 buffer_path: "buffer_1D_CFD"
-train_epochs: 10
+train_epochs: 50
+decay: true

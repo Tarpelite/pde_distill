@@ -5,7 +5,9 @@ data_dir: data/1DCFD
 batch_size: 100
 initial_step: 10
 t_train: 100
-filename: 1D_CFD_Rand_Eta0.01_Zeta0.01_periodic_Train.hdf5
+train_epochs: 30
+# filename: 1D_CFD_Rand_Eta0.01_Zeta0.01_periodic_Train.hdf5
+filename: Sod1.hdf5
 reduced_resolution: 8
 reduced_resolution_t: 5
 mom: 0

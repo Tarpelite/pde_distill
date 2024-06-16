@@ -163,3 +163,4 @@ cython_debug/
 
 data/
 outputs/
+buffer_1D_CFD/

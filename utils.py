@@ -8,6 +8,7 @@ import h5py
 from torch.utils.data import Dataset
 import math as mt
 import fno
+from tqdm import tqdm
 
 
 class FNODatasetSingle(Dataset):
@@ -253,8 +254,8 @@ def get_dataset(data_dir, filename, batch_size=1, num_workers=2, args=None):
                                 if_test=True
                                 )
     
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    test_loader = torch.utils.data.DataLoader(val_data, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers)
+    test_loader = torch.utils.data.DataLoader(val_data, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers)
 
     return train_loader, test_loader
 
@@ -283,7 +284,7 @@ def get_time():
 
 
 def epoch(mode, dataloader, net, optimizer, criterion, args):
-    loss_avg, num_exp = 0, 0
+    loss, loss_avg, num_exp = 0, 0, 0
     net = net.to(args.device)
 
 
@@ -292,15 +293,16 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
     else:
         net.eval()
 
-    for i_batch, datum in enumerate(dataloader):
+    for i_batch in tqdm(dataloader):
         xx, yy, grid = i_batch
 
         # xx: input tensor (first few time steps) [b, x1, ..., xd, t_init, v]
         # yy: target tensor [b, x1, ..., xd, t, v]
         # grid: meshgrid [b, x1, ..., xd, dims]
-        xx = xx.to(net.device)
-        yy = yy.to(net.device)
-        grid = grid.to(net.device)
+        device = torch.device(args.device)
+        xx = xx.to(device)
+        yy = yy.to(device)
+        grid = grid.to(device)
 
         # Initialize the prediction tensor
         pred = yy[..., :args.initial_step, :]
@@ -313,45 +315,28 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
         # train in single style
         x = xx[..., :args.t_train-1 , :]
         y = yy[..., args.t_train-1:args.t_train, :]
-        pred = net(x, grid)
+
+        # import pudb;pu.db;
+        pred = net(x.reshape(x.shape[0], x.shape[1],x.shape[2]*x.shape[-1]), grid)
         _batch = yy.size(0)
-        loss += criterion(pred.reshape(_batch, -1), y.reshape(_batch, -1))
-
-
-        # img = datum[0].float().to(args.device)
-        # lab = datum[1].long().to(args.device)
-
-        # if mode == "train" and texture:
-        #     img = torch.cat([torch.stack([torch.roll(im, (torch.randint(args.im_size[0]*args.canvas_size, (1,)), torch.randint(args.im_size[0]*args.canvas_size, (1,))), (1,2))[:,:args.im_size[0],:args.im_size[1]] for im in img]) for _ in range(args.canvas_samples)])
-        #     lab = torch.cat([lab for _ in range(args.canvas_samples)])
-
-        
-
-        # if args.dataset == "ImageNet" and mode != "train":
-        #     lab = torch.tensor([class_map[x.item()] for x in lab]).to(args.device)
-
-        # n_b = lab.shape[0]
-
-        # output = net(img)
-        # loss = criterion(output, lab)
-
-        # acc = np.sum(np.equal(np.argmax(output.cpu().data.numpy(), axis=-1), lab.cpu().data.numpy()))
-
-        n_b = xx.shape[0]
-
-        loss_avg += loss.item() * n_b
-        # acc_avg += acc
-        num_exp += n_b
+        # import pudb;pu.db;
+        loss_avg = criterion(pred.reshape(_batch, -1), y.reshape(_batch, -1))
 
         if mode == 'train':
             optimizer.zero_grad()
-            loss.backward()
+            loss_avg.backward()
             optimizer.step()
 
-    loss_avg /= num_exp
-    acc_avg /= num_exp
+        n_b = xx.shape[0]
 
-    return loss_avg
+        loss += loss_avg.item() * n_b
+        # acc_avg += acc
+        num_exp += n_b
+
+    loss /= num_exp
+    # acc_avg /= num_exp
+
+    return loss
 
 # def evaluate_synset(it_eval, net, pde_train, labels_train, testloader, args, return_loss=False, texture=False):
 #     net = net.to(args.device)

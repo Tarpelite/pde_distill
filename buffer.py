@@ -72,13 +72,13 @@ def main(cfg: DictConfig):
 
         for e in range(args.train_epochs):
 
-            train_loss, train_acc = epoch("train", dataloader=train_loader, net=teacher_net, optimizer=teacher_optim,
+            train_loss = epoch("train", dataloader=train_loader, net=teacher_net, optimizer=teacher_optim,
                                         criterion=criterion, args=args)
 
-            test_loss, test_acc = epoch("test", dataloader=test_loader, net=teacher_net, optimizer=None,
+            test_loss  = epoch("test", dataloader=test_loader, net=teacher_net, optimizer=None,
                                         criterion=criterion, args=args)
 
-            print("Itr: {}\tEpoch: {}\tTrain Acc: {}\tTest Acc: {}".format(it, e, train_acc, test_acc))
+            print("Itr: {}\tEpoch: {}\tTrain MSE: {}\tTest MSE: {}".format(it, e, train_loss, test_loss))
 
             timestamps.append([p.detach().cpu() for p in teacher_net.parameters()])
 

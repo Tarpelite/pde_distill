@@ -102,6 +102,8 @@ class FNO1d(nn.Module):
 
     def forward(self, x, grid):
         # x dim = [b, x1, t*v]
+        
+        # import pudb;pu.db;
         x = torch.cat((x, grid), dim=-1)
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
