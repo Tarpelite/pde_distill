@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import os
 import h5py
+import torch.utils
 from torch.utils.data import Dataset
 import math as mt
 import fno
@@ -38,7 +39,7 @@ class FNODatasetSingle(Dataset):
         if filename[-2:] != 'h5':
             print(f".HDF5 file extension is assumed hereafter")
         
-            with h5py.File(root_path, 'r') as f:
+            with h5py.File(root_path, 'r', swmr=True) as f:
                 keys = list(f.keys())
                 keys.sort()
                 if 'tensor' not in keys:
@@ -338,42 +339,56 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
 
     return loss
 
-# def evaluate_synset(it_eval, net, pde_train, labels_train, testloader, args, return_loss=False, texture=False):
-#     net = net.to(args.device)
-#     images_train = images_train.to(args.device)
-#     labels_train = labels_train.to(args.device)
-#     lr = float(args.lr_net)
-#     Epoch = int(args.epoch_eval_train)
-#     lr_schedule = [Epoch//2+1]
-#     optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
 
-#     criterion = nn.CrossEntropyLoss().to(args.device)
-
-#     dst_train = TensorDataset(images_train, labels_train)
-#     trainloader = torch.utils.data.DataLoader(dst_train, batch_size=args.batch_train, shuffle=True, num_workers=0)
-
-#     start = time.time()
-#     acc_train_list = []
-#     loss_train_list = []
-
-#     for ep in tqdm.tqdm(range(Epoch+1)):
-#         loss_train, acc_train = epoch('train', trainloader, net, optimizer, criterion, args, aug=True, texture=texture)
-#         acc_train_list.append(acc_train)
-#         loss_train_list.append(loss_train)
-#         if ep == Epoch:
-#             with torch.no_grad():
-#                 loss_test, acc_test = epoch('test', testloader, net, optimizer, criterion, args, aug=False)
-#         if ep in lr_schedule:
-#             lr *= 0.1
-#             optimizer = torch.optim.SGD(net.parameters(), lr=lr, momentum=0.9, weight_decay=0.0005)
+class TensorDataset(Dataset):
+    def __init__(self, pde_data, grid, args):
+        self.pde_data = pde_data.detach().float()
+        self.grid = grid
+        self.initial_step = args.initial_step
+    
+    def __len__(self):
+        return self.pde_data.shape[0]
+    
+    def __getitem__(self, index):
+        return self.pde_data[index, ..., :self.initial_step, :], self.pde_data[index], self.grid 
+        
 
 
-#     time_train = time.time() - start
 
-#     print('%s Evaluate_%02d: epoch = %04d train time = %d s train loss = %.6f train acc = %.4f, test acc = %.4f' % (get_time(), it_eval, Epoch, int(time_train), loss_train, acc_train, acc_test))
+def evaluate_synset(it_eval, net, pde_data, grid, testloader, args):
+    
+    device = torch.device(args.device)
+    net = net.to(device)
+    xx_train  = xx_train.to(device)
+    yy_train = yy_train.to(device)
 
-#     if return_loss:
-#         return net, acc_train_list, acc_test, loss_train_list, loss_test
-#     else:
-#         return net, acc_train_list, acc_test
+    lr = float(args.lr_net)
+    Epoch = int(args.epoch_eval_train)
+    lr_schedule = [Epoch//2+1]
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr,  weight_decay=0.0005)
+
+    criterion = nn.MSELoss().to(device)
+    dst_train = TensorDataset(pde_data, grid)
+    train_loader = torch.utils.data.DataLoader(dst_train,batch_size=args.batch_train, shuffle=True, num_workers=0)
+
+
+    start = time.time()
+    loss_train_list = []
+
+    for ep in tqdm.tqdm(range(Epoch+1)):
+        loss_train = epoch('train', dataloader=train_loader, net=net, optimizer=optimizer, criterion=criterion, arg=args)
+        loss_train_list.append(loss_train)
+        if ep == Epoch:
+            with torch.no_grad():
+                loss_test = epoch('test', testloader, net, optimizer, criterion, args, )
+        if ep in lr_schedule:
+            lr *= 0.1
+            optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=0.0005)
+
+
+    time_train = time.time() - start
+
+    print('%s Evaluate_%02d: epoch = %04d train time = %d s train mse = %.6f , test mse = %.6f' % (get_time(), it_eval, Epoch, int(time_train), loss_train, loss_test))
+
+    return net, loss_train_list, loss_test
 

@@ -10,7 +10,7 @@ reduced_resolution: 8
 reduced_resolution_t: 5
 mom: 0
 l2: 0
-save_interval: 10
+save_interval: 1
 modes: 16
 width: 20
 num_channel: 3
@@ -20,5 +20,5 @@ batch_real : 16
 reduced_batch: 1
 device: "cuda"
 buffer_path: "buffer_1D_CFD"
-train_epochs: 50
+train_epochs: 30
 decay: true
