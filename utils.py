@@ -343,7 +343,7 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
 class TensorDataset(Dataset):
     def __init__(self, pde_data, grid, args):
         self.pde_data = pde_data.detach().float()
-        self.grid = grid
+        self.grid = grid[0]
         self.initial_step = args.initial_step
     
     def __len__(self):
@@ -359,8 +359,8 @@ def evaluate_synset(it_eval, net, pde_data, grid, testloader, args):
     
     device = torch.device(args.device)
     net = net.to(device)
-    xx_train  = xx_train.to(device)
-    yy_train = yy_train.to(device)
+    pde_data  = pde_data.to(device)
+    grid = grid.to(device)
 
     lr = float(args.lr_net)
     Epoch = int(args.epoch_eval_train)
@@ -368,15 +368,15 @@ def evaluate_synset(it_eval, net, pde_data, grid, testloader, args):
     optimizer = torch.optim.Adam(net.parameters(), lr=lr,  weight_decay=0.0005)
 
     criterion = nn.MSELoss().to(device)
-    dst_train = TensorDataset(pde_data, grid)
-    train_loader = torch.utils.data.DataLoader(dst_train,batch_size=args.batch_train, shuffle=True, num_workers=0)
+    dst_train = TensorDataset(pde_data, grid, args)
+    train_loader = torch.utils.data.DataLoader(dst_train,batch_size=args.batch_syn_eval, shuffle=True, num_workers=0)
 
 
     start = time.time()
     loss_train_list = []
 
-    for ep in tqdm.tqdm(range(Epoch+1)):
-        loss_train = epoch('train', dataloader=train_loader, net=net, optimizer=optimizer, criterion=criterion, arg=args)
+    for ep in tqdm(range(Epoch+1)):
+        loss_train = epoch('train', dataloader=train_loader, net=net, optimizer=optimizer, criterion=criterion, args=args)
         loss_train_list.append(loss_train)
         if ep == Epoch:
             with torch.no_grad():
