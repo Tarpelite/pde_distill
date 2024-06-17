@@ -1,6 +1,6 @@
 model_name: 'FNO1D'
 num_experts: 100
-data_dir: "data/1DCFD"
+data_dir: "/vepfs-sha/bx/pde/pdebench/1D/CFD/Train"
 batch_size: 16
 num_workers: 8
 initial_step: 20
