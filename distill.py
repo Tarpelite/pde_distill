@@ -38,6 +38,7 @@ def main(args):
     ''' initialize the synthetic data '''
 
     real_example = next(iter(train_loader))
+
     assert args.num_channel == real_example[1].shape[-1]
     assert args.num_t <= real_example[1].shape[-2]
     # assert args.grid_size <= real_example[1].shape[2]
@@ -46,8 +47,9 @@ def main(args):
         pass
     else:
         print('initialize synthetic data from random noise')
-        pde_data_sync = torch.randn(size=(args.sync_num, real_example[1].shape[1], real_example[1].shape[-2], real_example[1].shape[-1]))
-        syn_grid = real_example[-1]
+        pde_data_sync = torch.randn(size=(args.sync_num, real_example[1].shape[1], real_example[1].shape[-2], real_example[1].shape[-1])).to(args.device)
+        print('======pde_data_sync shape: ', pde_data_sync.shape)
+        syn_grid = real_example[-1][0].detach().to(args.device).repeat(args.sync_num, 1, 1)
 
     syn_lr = torch.tensor(args.lr_teacher).to(args.device)
 
@@ -55,6 +57,7 @@ def main(args):
     ''' training '''
     pde_data_sync = pde_data_sync.detach().to(args.device).requires_grad_(True)
     syn_lr = syn_lr.detach().to(args.device).requires_grad_(True)
+    # optimizer_pde = torch.optim.SGD([pde_data_sync], lr=args.lr_pde, momentum=0.5)
     optimizer_pde = torch.optim.Adam([pde_data_sync], lr=args.lr_pde)
     optimizer_lr = torch.optim.SGD([syn_lr], lr=args.lr_lr, momentum=0.5)
     optimizer_pde.zero_grad()
@@ -94,7 +97,6 @@ def main(args):
         random.shuffle(buffer)
 
     best_acc = {m: 0 for m in model_eval_pool}
-
     best_std = {m: 0 for m in model_eval_pool}
 
     for it in range(0, args.Iteration+1):
@@ -102,6 +104,7 @@ def main(args):
 
         # writer.add_scalar('Progress', it, it)
         # wandb.log({"Progress": it}, step=it)
+        
         ''' Evaluate synthetic data '''
         if it in eval_it_pool:
             for model_eval in model_eval_pool:
@@ -111,7 +114,10 @@ def main(args):
                 accs_train = []
                 for it_eval in range(args.num_eval):
                     net_eval = get_network(args).to(args.device) # get a random model
-
+                    #      
+                    # for name, param in net_eval.named_parameters():
+                    #     print(name, param.shape, param.dtype)
+                    # exit()
                     with torch.no_grad():
                         pde_save = pde_data_sync
                     pde_data_sync_eval = copy.deepcopy(pde_save.detach()) # avoid any unaware modification
@@ -151,12 +157,16 @@ def main(args):
 
         # wandb.log({"Synthetic_LR": syn_lr.detach().cpu()}, step=it)
 
+
+        ''' Train synthetic data '''
         student_net = get_network(args).to(args.device)  # get a random model
         student_net = ReparamModule(student_net)
         if args.distributed:
             student_net = torch.nn.DataParallel(student_net)
         student_net.train()
-
+        # for name, param in student_net.named_parameters():
+        #     print(name, param.shape)
+        # exit()
         num_params = sum([np.prod(p.size()) for p in (student_net.parameters())])
 
         if args.load_all:
@@ -200,15 +210,15 @@ def main(args):
                 indices_chunks = list(torch.split(indices, args.batch_syn))
             these_indices = indices_chunks.pop()
 
-            x = syn_pdes[these_indices][..., :-1]
-            this_y = syn_pdes[these_indices][..., -1]
+            x = syn_pdes[these_indices][..., :-1, :]
+            this_y = syn_pdes[these_indices][..., -1, :].unsqueeze(-2)
 
             if args.distributed:
                 forward_params = student_params[-1].unsqueeze(0).expand(torch.cuda.device_count(), -1)
             else:
                 forward_params = student_params[-1]
-          
-            x = student_net(x, syn_grid, flat_param=forward_params)
+            # print('========', x.shape, syn_grid.shape, forward_params.shape)
+            x = student_net(x.reshape(x.shape[0], x.shape[1], -1), syn_grid[:x.shape[0]], flat_param=forward_params)
             ce_loss = criterion(x, this_y)
 
             grad = torch.autograd.grad(ce_loss, student_params[-1], create_graph=True)[0]
@@ -218,8 +228,18 @@ def main(args):
         param_loss = torch.tensor(0.0).to(args.device)
         param_dist = torch.tensor(0.0).to(args.device)
 
-        param_loss += torch.nn.functional.mse_loss(student_params[-1], target_params, reduction="sum")
-        param_dist += torch.nn.functional.mse_loss(starting_params, target_params, reduction="sum")
+        # def mse_loss_complex(output, target):
+        #     diff = output - target
+        #     return torch.nn.functional.mse_loss(torch.abs(diff), torch.zeros_like(torch.abs(diff)), reduction="sum")
+        
+        def mse_loss_complex(output, target):
+            diff = output - target
+            diff_abs_squared = diff.abs()**2
+            loss = diff_abs_squared.mean()
+            return loss
+
+        param_loss += mse_loss_complex(student_params[-1], target_params)
+        param_dist += mse_loss_complex(starting_params, target_params)
 
         param_loss_list.append(param_loss)
         param_dist_list.append(param_dist)

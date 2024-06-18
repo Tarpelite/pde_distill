@@ -296,7 +296,7 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
 
     for i_batch in tqdm(dataloader):
         xx, yy, grid = i_batch
-
+        # print(xx.shape, yy.shape, grid.shape)
         # xx: input tensor (first few time steps) [b, x1, ..., xd, t_init, v]
         # yy: target tensor [b, x1, ..., xd, t, v]
         # grid: meshgrid [b, x1, ..., xd, dims]

@@ -38,14 +38,17 @@ class ReparamModule(nn.Module):
                         param_numels.append(p.numel())
                         param_shapes.append(p.size())
 
-        assert len(set(p.dtype for p in params)) == 2, \
-            "expects all parameters in module to have same dtype"
+        # assert len(set(p.dtype for p in params)) <= 1, \
+        #     "expects all parameters in module to have same dtype"
 
         # store the info for unflatten
         self._param_infos = tuple(param_infos)
         self._shared_param_infos = tuple(shared_param_infos)
         self._param_numels = tuple(param_numels)
         self._param_shapes = tuple(param_shapes)
+        
+        # self._param_infos:
+        # (('module.fc0', 'weight'), ('module.fc0', 'bias'), ('module.conv0', 'weights1'), ('module.conv1', 'weights1'), ('module.conv2', 'weights1'), ('module.conv3', 'weights1'), ('module.w0', 'weight'), ('module.w0', 'bias'), ('module.w1', 'weight'), ('module.w1', 'bias'), ('module.w2', 'weight'), ('module.w2', 'bias'), ('module.w3', 'weight'), ('module.w3', 'bias'), ('module.fc1', 'weight'), ('module.fc1', 'bias'), ('module.fc2', 'weight'), ('module.fc2', 'bias'))
 
         # flatten
         flat_param = nn.Parameter(torch.cat([p.reshape(-1) for p in params], 0))
@@ -109,10 +112,19 @@ class ReparamModule(nn.Module):
 
     def _unflatten_param(self, flat_param):
         ps = (t.view(s) for (t, s) in zip(flat_param.split(self._param_numels), self._param_shapes))
+        # for t in ps:
+        #     print(t.size())
+        # exit()
         for (mn, n), p in zip(self._param_infos, ps):
-            setattr(self._get_module_from_name(mn), n, p)  # This will set as plain attr
+            if 'conv' in mn:
+                setattr(self._get_module_from_name(mn), n, p)
+            else:
+                setattr(self._get_module_from_name(mn), n, p.real)  # This will set as plain attr
         for (mn, n, shared_mn, shared_n) in self._shared_param_infos:
-            setattr(self._get_module_from_name(mn), n, getattr(self._get_module_from_name(shared_mn), shared_n))
+            if 'conv' in mn:
+                setattr(self._get_module_from_name(mn), n, getattr(self._get_module_from_name(shared_mn), shared_n))
+            else:
+                setattr(self._get_module_from_name(mn), n, getattr(self._get_module_from_name(shared_mn), shared_n).real)
 
     @contextmanager
     def unflattened_param(self, flat_param):

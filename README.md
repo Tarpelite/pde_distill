@@ -14,5 +14,5 @@ python buffer.py +args=train_1DCFD.yaml
 
 ## Run Distill 
 ```bash
-python distill.py +args=distill_1DCFD.yaml
+CUDA_VISIBLE_DEVICES=0 python distill.py +args=distill_1DCFD.yaml
 ```

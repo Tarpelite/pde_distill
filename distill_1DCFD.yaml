@@ -14,7 +14,6 @@ save_interval: 1
 modes: 16
 width: 20
 num_channel: 3
-lr_teacher : 1e-4
 batch_train : 16
 batch_real : 16
 reduced_batch: 1
@@ -42,8 +41,11 @@ num_eval: 1     # how many networks to evaluate on
 syn_steps: 20   # how many steps to take on synthetic data
 batch_syn: 8
 batch_syn_eval: 24
-lr_pde: 1e-03
+
+lr_pde: 1
+lr_teacher : 1e-4
 lr_lr: 1e-05
 lr_net: 
+
 syn_data_init: rand
 distributed: False
