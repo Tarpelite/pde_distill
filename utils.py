@@ -269,13 +269,7 @@ def get_network(args):
         net = fno.FNO2d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
     elif args.model_name == "FNO3D":
         net = fno.FNO3d(num_channels=args.num_channel, modes=args.modes, initial_step=args.initial_step, width=args.width)
-    
-    for param in net.parameters():
-        param.type(torch.complex64)
-    for param in net.parameters():
-        print(param.dtype)
 
-    exit()
     gpu_num = torch.cuda.device_count()
     
     if gpu_num > 0:
