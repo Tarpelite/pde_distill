@@ -134,7 +134,6 @@ def main(args):
                 # wandb.log({'Std/{}'.format(model_eval): acc_test_std}, step=it)
                 # wandb.log({'Max_Std/{}'.format(model_eval): best_std[model_eval]}, step=it)
 
-
         if it in eval_it_pool and (save_this_it or it % 1000 == 0):
             with torch.no_grad():
                 pde_save = pde_data_sync.cuda()
@@ -191,23 +190,15 @@ def main(args):
 
         syn_pdes = pde_data_sync
 
-        y_hat = label_syn.to(args.device)
-
         param_loss_list = []
         param_dist_list = []
         indices_chunks = []
 
-        if args.batch_syn is None:
-            args.batch_syn = args.sync_num
-
         for step in range(args.syn_steps):
-
             if not indices_chunks:
                 indices = torch.randperm(len(syn_pdes))
                 indices_chunks = list(torch.split(indices, args.batch_syn))
-
             these_indices = indices_chunks.pop()
-
 
             x = syn_pdes[these_indices][..., :-1]
             this_y = syn_pdes[these_indices][..., -1]
@@ -223,7 +214,6 @@ def main(args):
             grad = torch.autograd.grad(ce_loss, student_params[-1], create_graph=True)[0]
 
             student_params.append(student_params[-1] - syn_lr * grad)
-
 
         param_loss = torch.tensor(0.0).to(args.device)
         param_dist = torch.tensor(0.0).to(args.device)

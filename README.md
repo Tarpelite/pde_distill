@@ -11,3 +11,8 @@ The Data could be downloaded from [1DCFD](https://darus.uni-stuttgart.de/file.xh
 ```bash
 python buffer.py +args=train_1DCFD.yaml
 ```
+
+## Run Distill 
+```bash
+python distill.py +args=distill_1DCFD.yaml
+```

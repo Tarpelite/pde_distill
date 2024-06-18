@@ -23,28 +23,27 @@ buffer_path: "buffer_1D_CFD"
 train_epochs: 30
 decay: true
 
-epoch_eval_train: 1000
-
 max_experts: 100
 max_files: 100
-Iteration: 5000
-eval_it: 100
+Iteration: 5000   # how many distillation steps to perform
+eval_it: 100       # how often to evaluate
+epoch_eval_train: 10   # epochs to train a model with synthetic data
 
 sync_num: 1000
 grid_size: 
 num_t: 21
 
-load_all: 
+load_all: Ture  # only use if you can fit all expert trajectories into RAM
 
-max_start_epoch: 25
+max_start_epoch: 25  # max epoch we can start at
 expert_epochs: 3
 
-syn_steps: 20
+num_eval: 1     # how many networks to evaluate on
+syn_steps: 20   # how many steps to take on synthetic data
 batch_syn: 8
 batch_syn_eval: 24
 lr_pde: 1e-03
 lr_lr: 1e-05
 lr_net: 
 syn_data_init: rand
-distributed: 
-num_eval: 7
+distributed: False
