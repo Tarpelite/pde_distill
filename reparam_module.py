@@ -38,7 +38,7 @@ class ReparamModule(nn.Module):
                         param_numels.append(p.numel())
                         param_shapes.append(p.size())
 
-        assert len(set(p.dtype for p in params)) <= 1, \
+        assert len(set(p.dtype for p in params)) == 2, \
             "expects all parameters in module to have same dtype"
 
         # store the info for unflatten
