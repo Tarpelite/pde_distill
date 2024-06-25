@@ -294,7 +294,7 @@ def epoch(mode, dataloader, net, optimizer, criterion, args):
     else:
         net.eval()
 
-    for i_batch in tqdm(dataloader):
+    for i_batch in dataloader:
         xx, yy, grid = i_batch
         # print(xx.shape, yy.shape, grid.shape)
         # xx: input tensor (first few time steps) [b, x1, ..., xd, t_init, v]
@@ -355,14 +355,14 @@ class TensorDataset(Dataset):
 
 
 
-def evaluate_synset(it_eval, net, pde_data, grid, testloader, args):
+def evaluate_synset(it_eval, net, pde_data, grid, testloader, lr_init, args):
     
     device = torch.device(args.device)
     net = net.to(device)
     pde_data  = pde_data.to(device)
     grid = grid.to(device)
 
-    lr = float(args.lr_net)
+    lr = float(lr_init)
     Epoch = int(args.epoch_eval_train)
     lr_schedule = [Epoch//2+1]
     optimizer = torch.optim.Adam(net.parameters(), lr=lr,  weight_decay=0.0005)
@@ -380,7 +380,7 @@ def evaluate_synset(it_eval, net, pde_data, grid, testloader, args):
         loss_train_list.append(loss_train)
         if ep == Epoch:
             with torch.no_grad():
-                loss_test = epoch('test', testloader, net, optimizer, criterion, args, )
+                loss_test = epoch('test', testloader, net, optimizer, criterion, args)
         if ep in lr_schedule:
             lr *= 0.1
             optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=0.0005)

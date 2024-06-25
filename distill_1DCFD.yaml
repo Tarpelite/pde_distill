@@ -3,49 +3,53 @@ num_experts: 100
 data_dir: "./data/1DCFD"
 batch_size: 16
 num_workers: 8
+filename: '1D_CFD_Rand_Eta0.01_Zeta0.01_periodic_Train.hdf5'
 initial_step: 20
 t_train: 21
-filename: '1D_CFD_Rand_Eta0.01_Zeta0.01_periodic_Train.hdf5'
 reduced_resolution: 8
 reduced_resolution_t: 5
+reduced_batch: 1
 mom: 0
 l2: 0
+decay: true
 save_interval: 1
 modes: 16
 width: 20
 num_channel: 3
 batch_train : 16
 batch_real : 16
-reduced_batch: 1
 device: "cuda"
 buffer_path: "buffer_1D_CFD"
 train_epochs: 30
-decay: true
 
+
+distributed: False
+model_eval_pool: ["FNO1D"]
+load_all: Ture  # only use if you can fit all expert trajectories into RAM
+
+# init
 max_experts: 100
 max_files: 100
-Iteration: 5000   # how many distillation steps to perform
-eval_it: 100       # how often to evaluate
-epoch_eval_train: 10   # epochs to train a model with synthetic data
-
+syn_data_init: real
 sync_num: 1000
 grid_size: 
 num_t: 21
 
-load_all: Ture  # only use if you can fit all expert trajectories into RAM
+Iteration: 5000   # how many distillation steps to perform
 
-max_start_epoch: 25  # max epoch we can start at
-expert_epochs: 3
+# eval
+eval_it: 100       # how often to evaluate when train syn_data
+num_eval: 1     # how many networks to evaluate on when evaluate_syn_data
+epoch_eval_train: 10   # epochs to train a model with syn_data when evaluate_synset
+batch_syn_eval: 24   # batch size of syn_data to train a model when evaluate_synset
 
-num_eval: 1     # how many networks to evaluate on
-syn_steps: 20   # how many steps to take on synthetic data
-batch_syn: 8
-batch_syn_eval: 24
-
-lr_pde: 1
-lr_teacher : 1e-4
+# train
+lr_teacher : 1e-3  # init syn_lr
+lr_pde: 1e-4
 lr_lr: 1e-05
-lr_net: 
+max_start_epoch: 20  # max epoch we can start at
+expert_epochs: 5
+syn_steps: 40   # how many steps to take on synthetic data
+batch_syn: 64
 
-syn_data_init: rand
-distributed: False
+
