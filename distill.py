@@ -19,8 +19,8 @@ import hydra
 
 
 def mse_loss_complex(output, target):
-    loss_real = torch.nn.functional.mse_loss(output.real, target.real, reduction="sum")
-    loss_imag = torch.nn.functional.mse_loss(output.imag, target.imag, reduction="sum")
+    loss_real = torch.nn.functional.mse_loss(output.real, target.real, reduction="mean")
+    loss_imag = torch.nn.functional.mse_loss(output.imag, target.imag, reduction="mean")
     return loss_real + loss_imag
 
 def init_syn_data(args, train_loader):
@@ -190,10 +190,11 @@ def train_syn_data_step(args, buffer, pde_data_sync, syn_grid, syn_lr, expert_fi
         ce_loss = criterion(x, this_y)
 
         grad = torch.autograd.grad(ce_loss, student_params[-1], create_graph=True)[0]
-        grad = torch.complex((torch.clamp(grad.real, -1, 1)), (torch.clamp(grad.imag, -1, 1)))
+        grad = torch.complex((torch.clamp(grad.real, -args.grad_clip, args.grad_clip)), (torch.clamp(grad.imag, -args.grad_clip, args.grad_clip)))
         student_params.append(student_params[-1] - syn_lr * grad)
+        # print('===========', student_params[-1].abs().max(), student_params[-1].abs().min()) 
 
-    param_loss = torch.tensor(0.0).to(args.device)
+    param_loss = torch.tensor(0.0).to(args.device )
     param_dist = torch.tensor(0.0).to(args.device)
 
     param_loss += mse_loss_complex(student_params[-1], target_params)
@@ -208,7 +209,7 @@ def train_syn_data_step(args, buffer, pde_data_sync, syn_grid, syn_lr, expert_fi
     param_dist /= num_params
 
 
-    print('========== %d ->%d param_loss = %.6f, param_dist = %.6f'%(start_epoch, start_epoch+args.expert_epochs, param_loss.item(), param_dist.item()))
+    print('========== %d ->%d param_loss = %.16f, param_dist = %.16f'%(start_epoch, start_epoch+args.expert_epochs, param_loss.item(), param_dist.item()))
     param_loss /= param_dist
 
     grand_loss = param_loss

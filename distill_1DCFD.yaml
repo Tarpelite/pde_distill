@@ -45,11 +45,11 @@ batch_syn_eval: 24   # batch size of syn_data to train a model when evaluate_syn
 
 # train
 lr_teacher : 1e-3  # init syn_lr
-lr_pde: 1e-4
 lr_lr: 1e-05
+lr_pde: 1e-4
 max_start_epoch: 20  # max epoch we can start at
 expert_epochs: 5
 syn_steps: 40   # how many steps to take on synthetic data
 batch_syn: 64
-
+grad_clip: 0.1
 
